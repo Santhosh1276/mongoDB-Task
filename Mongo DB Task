@@ -1,0 +1,118 @@
+Database Schema (Collections & Sample Structure)
+--------------------------------------------------------
+1. users (Stores user details)
+{
+  "_id": ObjectId("userId1"),
+  "name": "John Doe",
+  "email": "john@example.com",
+  "batch": "Batch-5",
+  "mentor_id": ObjectId("mentorId1")
+}
+
+2. codekata (Stores coding problems solved by users)
+{
+  "_id": ObjectId("codekataId1"),
+  "user_id": ObjectId("userId1"),
+  "problems_solved": 150
+}
+
+3. attendance (Stores attendance details)
+{
+  "_id": ObjectId("attendanceId1"),
+  "user_id": ObjectId("userId1"),
+  "date": ISODate("2020-10-16"),
+  "status": "present"
+}
+
+
+4. topics (Stores topics covered in classes)
+{
+  "_id": ObjectId("topicId1"),
+  "topic_name": "MongoDB Aggregation",
+  "date": ISODate("2020-10-10")
+}
+
+5. tasks (Stores tasks assigned)
+{
+  "_id": ObjectId("taskId1"),
+  "task_name": "MongoDB Project",
+  "date": ISODate("2020-10-12"),
+  "submitted_by": [ObjectId("userId1"), ObjectId("userId2")]
+}
+
+6. company_drives (Stores details of placement drives)
+{
+  "_id": ObjectId("driveId1"),
+  "company_name": "Google",
+  "drive_date": ISODate("2020-10-20"),
+  "students_appeared": [ObjectId("userId1"), ObjectId("userId2")]
+}
+
+
+7. mentors (Stores mentor details)
+{
+  "_id": ObjectId("mentorId1"),
+  "name": "Mr. Smith",
+  "mentees": [ObjectId("userId1"), ObjectId("userId2"), ...]
+}
+------------------------------------------------------------------------------------------------
+MongoDB Queries
+1. Find all the topics and tasks taught in October
+db.topics.find({
+  "date": { $gte: ISODate("2020-10-01"), $lte: ISODate("2020-10-31") }
+})
+
+db.tasks.find({
+  "date": { $gte: ISODate("2020-10-01"), $lte: ISODate("2020-10-31") }
+})
+
+2. Find all company drives between 15-Oct-2020 and 31-Oct-2020
+db.company_drives.find({
+  "drive_date": { $gte: ISODate("2020-10-15"), $lte: ISODate("2020-10-31") }
+})
+
+
+3. Find all company drives and students who appeared for placements
+db.company_drives.aggregate([
+  {
+    $lookup: {
+      from: "users",
+      localField: "students_appeared",
+      foreignField: "_id",
+      as: "appeared_students"
+    }
+  }
+])
+
+
+4. Find the number of problems solved by each user in Codekata
+db.codekata.find({}, { "user_id": 1, "problems_solved": 1 })
+
+5. Find all mentors with more than 15 mentees
+db.mentors.find({ "mentees": { $size: { $gt: 15 } } })
+
+6. Find the number of users who were absent and did not submit tasks between 15-Oct-2020 and 31-Oct-2020
+db.attendance.aggregate([
+  {
+    $match: {
+      "date": { $gte: ISODate("2020-10-15"), $lte: ISODate("2020-10-31") },
+      "status": "absent"
+    }
+  },
+  {
+    $lookup: {
+      from: "tasks",
+      localField: "user_id",
+      foreignField: "submitted_by",
+      as: "submitted_tasks"
+    }
+  },
+  {
+    $match: { "submitted_tasks": { $size: 0 } }
+  },
+  {
+    $count: "users_absent_and_not_submitted"
+  }
+])
+
+
